@@ -1,4 +1,4 @@
-from flask import Flask, request
+from flask import Flask, request, render_template
 from Request import Request
 
 app = Flask(__name__)
@@ -11,20 +11,4 @@ def read_post():
 
 @app.route('/')
 def init():
-    return """<!DOCTYPE html>
-<html lang="en">
-
-<head>
-    <meta charset="UTF-8">
-    <title>Plan your trip</title>
-</head>
-
-<body>
-<h1>Plan your trip</h1>
-<form method="POST">
-    <input name="destination">
-    <input type="submit">
-</form>
-
-</body>
-</html>"""
+    return render_template('index.html')
