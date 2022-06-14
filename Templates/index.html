@@ -1,22 +1,45 @@
 <!doctype html>
-<html lang="en">
-  <head>
-      <title>Plan your trip</title>
+<html lang="en" class="h-100">
+  	<head>
+    	<title>Travel Planner</title>
+		<link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}">
+		<link rel="stylesheet" href="{{ url_for('static', filename='styling.css') }}">
 
-      <!-- Bootstrap CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet">
-  </head>
-  <body>
-    <h1 class="text-primary">
-        Plan your trip
-    </h1>    
-    <form method="POST">
-        <input name="destination">
-        <input type="submit">
-    </form>   
+		<!-- Bootstrap CSS -->
+		<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  	</head>
 
-    <!-- Bootstrap Javascripts -->  
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js"></script>
+  	<body class="h-100">  
+    	<div class="container h-100">
+			<div style="padding-left: 58%; padding-top: 4%; color: rgb(255, 208, 0); font-weight: bold; font-size: 12em;">
+				Hello.
+			</div>
+      		<div class="row h-100" style="padding-left: 55%; padding-top: 4%;">
+          		<div class="col-12 col-md-12 col-lg-12">
+            		<form method="POST">
+						<div class="form-group">
+							<label for="destination" style="font-weight: bold;">Which city do you want to go to?</label>
+							<input type="text" class="form-control form-control-lg" id="destination" name="destination" required>
+						</div>
+						<br>
+						<div class="form-group">
+							<label for="duration" style="font-weight: bold;">For how long? (days)</label>
+							<input type="text" class="form-control form-control-lg" id="duration" name="duration" required>
+						</div>
+						<br>
+						<div class="form-group">
+							<label for="budget" style="font-weight: bold;">How much are you willing to spend? (€)</label>
+							<input type="text" class="form-control form-control-lg" id="budget" name="budget" required>
+						</div>
+						<br>
+						<button type="submit" class="btn btn-warning btn-customized" style="font-weight: bold; align-items: center;">Plan my trip!</button>
+					</form>  
+				</div>
+			</div>
+		</div>
 
-  </body>    
+		<!-- Bootstrap Javascripts -->  
+		<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js"></script>
+
+  	</body>    
 </html>
