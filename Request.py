@@ -1,6 +1,5 @@
 class Request:
-    def __init__(self, location):
+    def __init__(self, location, budget, duration):
         self.location = location
-
-    def test(self):
-        print(self.location)
+        self.budget = budget
+        self.duration = duration

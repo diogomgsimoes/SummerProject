@@ -1,30 +1,17 @@
-from flask import Flask, request
+from flask import Flask, request, render_template, redirect, url_for
 from Request import Request
 
 app = Flask(__name__)
 
 @app.route('/', methods=["POST"])
 def read_post():
-    _request = Request(request.form["destination"])
-    _request.test()
-    return request.form["destination"]
+    _request = Request(request.form["destination"], request.form["budget"], request.form["duration"])
+    return redirect(url_for('map'))
+
+@app.route('/map')
+def map():
+    return render_template('map.html')
 
 @app.route('/')
 def init():
-    return """<!DOCTYPE html>
-<html lang="en">
-
-<head>
-    <meta charset="UTF-8">
-    <title>Plan your trip</title>
-</head>
-
-<body>
-<h1>Plan your trip</h1>
-<form method="POST">
-    <input name="destination">
-    <input type="submit">
-</form>
-
-</body>
-</html>"""
+    return render_template('index.html')
