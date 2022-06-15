@@ -36,8 +36,8 @@ class NominatimApi:
         
         # Replace whitespaces from the query string
         query = location.replace(' ', '+')
-        res = requests.get(f'{NominatimApi.interp_url}{query}')
-        data = json.loads(res.text)
+        response = requests.get(f'{NominatimApi.interp_url}{query}')
+        data = json.loads(response.text)
         # pprint.pprint(data)
         
         preferred_boundaries = []
@@ -60,8 +60,8 @@ class NominatimApi:
             add_data = json.loads(requests.get(
                 NominatimApi.add_data_url + 
                 'osmtype=' + loc_type['osm_type'][0].upper() + 
-                '&osmid=' + str(loc_type['osm_id'])).text
-                )
+                '&osmid=' + str(loc_type['osm_id'])).text)
+
             if loc_type['category'] == 'boundary':
                 preferred_boundaries.append({'data': loc_type, 'weight': loc_weights[loc_type['type'] + '_' + str(add_data['rank_address'])]})
             elif loc_type['type'] == 'city' or loc_type['type'] == 'village':
@@ -71,7 +71,7 @@ class NominatimApi:
         # Sort by preference (weights)
         preferred_boundaries = [pb['data'] for pb in sorted(preferred_boundaries, key=lambda d: d['weight'])]
         
-        # Swap coordinates to a more usefull way for the other APIs
+        # Swap coordinates to a more useful way for the other APIs (long, lat)(long, lat)
         for i in range(len(preferred_boundaries)):
             preferred_boundaries[i]['boundingbox'][1], preferred_boundaries[i]['boundingbox'][2] = preferred_boundaries[i]['boundingbox'][2], preferred_boundaries[i]['boundingbox'][1]
         
