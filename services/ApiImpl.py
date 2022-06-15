@@ -92,14 +92,20 @@ class OverpassApi:
                 data (pd.DataFrame): Pandas dataframe with all of the nodes/relations containing ltypes
         '''
         # Find all tourist attractions in bounds
-        q = ''
-        for i in ltypes: q += f'node[\"{i}\"](' + ','.join(bounds) + ');'
+        q = '('
+        for i in ltypes:
+            if '=' not in i:
+                q += f'node[\"{i}\"](' + ','.join(bounds) + ');'
+            else:
+                spl = i.split('=')
+                q += f'node[\"{spl[0]}\"=\"{spl[1]}\"](' + ','.join(bounds) + ');'
+        q += ');'
         
         query = f'[out:json][timeout:{timeout}];{q}out;'
         data = json.loads(requests.get(f'{OverpassApi.interp_url}{query}').text)
         elmnts = data['elements']
         logging.info(f'Found {len(elmnts)} elements for types: {ltypes}')
-        return pd.DataFrame(elmnts)
+        return pd.json_normalize(elmnts, sep='_')
 
 class GeocodePoint(HereApi):
     def __init__(self):
@@ -117,5 +123,6 @@ class GeocodePoint(HereApi):
 
 logging.basicConfig(level=logging.INFO)
 best_cadidate = NominatimApi.get_area('Lisboa')[0]
-OverpassApi.get_type_in_bounds(best_cadidate['boundingbox'])
-
+df = OverpassApi.get_type_in_bounds(best_cadidate['boundingbox'], ltypes=['tourism', 'amenity=restaurant'])
+# df.to_csv('data.csv', sep=',', encoding='utf-8')
+df.to_csv('data.csv', sep=',')
