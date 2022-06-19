@@ -1,3 +1,7 @@
 __pycache__/
 .env
 *.csv
+*.egg-info/
+
+# Curl manual files
+ta_curl.sh

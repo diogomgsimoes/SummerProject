@@ -7,6 +7,8 @@ import pandas as pd
 import re
 import itertools
 
+from db.Database import Database
+
 class NominatimApi:
     interp_url = 'https://nominatim.openstreetmap.org/search.php?format=jsonv2&q='
     add_data_url = 'https://nominatim.openstreetmap.org/details.php?format=json&'
@@ -128,11 +130,16 @@ logging.basicConfig(level=logging.INFO)
 best_cadidate = NominatimApi.get_area('Lisboa')[0]
 df = OverpassApi.get_type_in_bounds(best_cadidate['boundingbox'], ltypes=['tourism', 'amenity=restaurant'])
 location = df.loc[
-    df['tags_name'].str.contains('Zambeze', case=False, na=False) &
+    # df['tags_name'].str.contains('Zambeze', case=False, na=False) &
     df['tags_amenity'].str.contains('restaurant', case=False, na=False)]
 
-# TODO: Create a database with recovered values
-print(location.iloc[0]['tags_name'], end=' ')
-tripadvisor_rating = Ratings.get_rating(location.iloc[0]['tags_name'], 'Lisboa')
-print(f'-> Fetched rating: {tripadvisor_rating}')
+# Create a database with recovered values
+db = Database()
+for i, tar in enumerate(location.iloc):
+    if i > 10: break
+    print(tar['tags_name'], end=' ')
+    tripadvisor_rating = Ratings.get_rating(tar['tags_name'], 'Lisboa')
+    print(f'-> Fetched rating: {tripadvisor_rating}')
+    db.add_restaurant_entry(tar['tags_name'], tripadvisor_rating, 0)
+
 
