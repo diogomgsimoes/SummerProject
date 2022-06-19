@@ -1,0 +1,1 @@
+curl -A "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/101.0.4951.67 Safari/537.36 OPR/87.0.4390.45" https://html.duckduckgo.com/html/?q=Wok+Ninja+Lisboa+tripadvisor > ddg_n.html

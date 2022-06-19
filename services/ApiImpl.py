@@ -1,25 +1,11 @@
-from array import array
 import logging
 from HereApi import HereApi
 import requests
 import json
 import pprint
 import pandas as pd
-
-class MapPlace(HereApi):
-    def __init__(self):
-        super(MapPlace, self).__init__()
-        self.base_url = 'https://places.ls.hereapi.com/places/v1/discover/here'
-        
-    def get_all_places_near(self, coords: list):
-        try:
-            res = self.get(at=f'{coords[0]},{coords[1]}')
-            places = json.loads(res.text)['results']['items']
-            pprint.pprint(json.loads(res.text))
-            # pprint.pprint([p['title'] for p in places])
-            # pprint.pprint(places[4])
-        except ValueError:
-            return None
+import re
+import itertools
 
 class NominatimApi:
     interp_url = 'https://nominatim.openstreetmap.org/search.php?format=jsonv2&q='
@@ -107,22 +93,46 @@ class OverpassApi:
         logging.info(f'Found {len(elmnts)} elements for types: {ltypes}')
         return pd.json_normalize(elmnts, sep='_')
 
-class GeocodePoint(HereApi):
-    def __init__(self):
-        super(GeocodePoint, self).__init__()
-        self.base_url = 'https://geocoder.ls.hereapi.com/6.2/geocode.json'
-    
-    def get_coords(self, location: str) -> list:
+class Ratings:
+    @staticmethod
+    def get_rating(name: str, location: str) -> float:
+        name = name.replace(' ', '+')
         location = location.replace(' ', '+')
-        try:
-            res = self.get(searchtext=location)
-            coords = json.loads(res.text)['Response']['View'][0]['Result'][0]['Location']['DisplayPosition']
-            return [coords['Latitude'], coords['Longitude']]
-        except ValueError:
-            return None
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/101.0.4951.67 Safari/537.36 OPR/87.0.4390.45'
+        }
+        ddg_url = f'https://html.duckduckgo.com/html/?q={name}+{location}+tripadvisor'
+        r = requests.get(ddg_url, headers=headers)
+        logging.info(f'Trying connection to: {ddg_url}')
+        
+        # Go to first available site in the search
+        first_index = r.text.find('class=\"result__url\"') - 3
+        data = r.text[first_index:first_index+1024].replace('\n', '')
+        place_tripadvisor_url = ''
+        match = re.search(r'>(.*.html)', data)
+        if match:
+            place_tripadvisor_url = ''.join(itertools.takewhile(lambda x: x!="<", match.group(1).lstrip()))
+            url_directory = place_tripadvisor_url.split('/')[1]
+            # Always bypass to .com domain
+            place_tripadvisor_url = f'www.tripadvisor.com/{url_directory}'
+            
+        logging.info(f'Trying connection to: {place_tripadvisor_url}')
+        r = requests.get(f'https://{place_tripadvisor_url}', headers=headers)
+        
+        REVIEW_STR = '<h2>Ratings and reviews</h2>'
+        rating_idx = r.text.find(REVIEW_STR) + 67
+        
+        return float(r.text[rating_idx:rating_idx+3])
 
 logging.basicConfig(level=logging.INFO)
 best_cadidate = NominatimApi.get_area('Lisboa')[0]
 df = OverpassApi.get_type_in_bounds(best_cadidate['boundingbox'], ltypes=['tourism', 'amenity=restaurant'])
-# df.to_csv('data.csv', sep=',', encoding='utf-8')
-df.to_csv('data.csv', sep=',')
+location = df.loc[
+    df['tags_name'].str.contains('Zambeze', case=False, na=False) &
+    df['tags_amenity'].str.contains('restaurant', case=False, na=False)]
+
+# TODO: Create a database with recovered values
+print(location.iloc[0]['tags_name'], end=' ')
+tripadvisor_rating = Ratings.get_rating(location.iloc[0]['tags_name'], 'Lisboa')
+print(f'-> Fetched rating: {tripadvisor_rating}')
+
