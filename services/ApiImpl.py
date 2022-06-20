@@ -98,48 +98,79 @@ class OverpassApi:
 class Ratings:
     @staticmethod
     def get_rating(name: str, location: str) -> float:
-        name = name.replace(' ', '+')
+        db = Database()
+        
+        if not db.is_table_empty('RESTAURANT'):
+            # TODO: This location name must be something fixed for certain coordinates
+            # For now location=Lisboa and location=Lisbon are different db tables
+            local_record = db.get_restaurant_by_name(name, location)
+            
+            if local_record:
+                logging.info(f'Found {name} in local database, returning.')
+                return local_record[0][3]
+        
+        pname = name.replace(' ', '+')
         location = location.replace(' ', '+')
         headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/101.0.4951.67 Safari/537.36 OPR/87.0.4390.45'
         }
-        ddg_url = f'https://html.duckduckgo.com/html/?q={name}+{location}+tripadvisor'
+        ddg_url = f'https://html.duckduckgo.com/html/?q={pname}+{location}+tripadvisor'
         r = requests.get(ddg_url, headers=headers)
-        logging.info(f'Trying connection to: {ddg_url}')
         
         # Go to first available site in the search
-        first_index = r.text.find('class=\"result__url\"') - 3
-        data = r.text[first_index:first_index+1024].replace('\n', '')
-        place_tripadvisor_url = ''
-        match = re.search(r'>(.*.html)', data)
-        if match:
-            place_tripadvisor_url = ''.join(itertools.takewhile(lambda x: x!="<", match.group(1).lstrip()))
-            url_directory = place_tripadvisor_url.split('/')[1]
-            # Always bypass to .com domain
-            place_tripadvisor_url = f'www.tripadvisor.com/{url_directory}'
-            
-        logging.info(f'Trying connection to: {place_tripadvisor_url}')
-        r = requests.get(f'https://{place_tripadvisor_url}', headers=headers)
+        found_indices = [m.start() - 3 for m in re.finditer('class=\"result__url\"', r.text)]
         
-        REVIEW_STR = '<h2>Ratings and reviews</h2>'
-        rating_idx = r.text.find(REVIEW_STR) + 67
+        # Search only top three urls
+        for idx in found_indices[:3]:
+            data = r.text[idx:idx+1024].replace('\n', '')
+            place_tripadvisor_url = ''
+            match = re.search(r'>(.*.html)', data)
+            if match:
+                place_tripadvisor_url = ''.join(itertools.takewhile(lambda x: x!="<", match.group(1).lstrip()))
+                url_dir_list = place_tripadvisor_url.split('/')
+                
+                if len(url_dir_list) < 2:
+                    logging.error(f'Not Found (Skipping): {place_tripadvisor_url}')
+                    continue
+                
+                url_directory = place_tripadvisor_url.split('/')[1]
+                
+                if place_tripadvisor_url.find('tripadvisor') != -1 and place_tripadvisor_url.find('Restaurant_Review') != -1:
+                    # Always bypass to .com domain
+                    place_tripadvisor_url = f'www.tripadvisor.com/{url_directory}'
+                    logging.info(f'Found: {place_tripadvisor_url}')
+                    r = requests.get(f'https://{place_tripadvisor_url}', headers=headers)
+                    
+                    REVIEW_STR = '<h2>Ratings and reviews</h2>'
+                    rating_idx = r.text.find(REVIEW_STR) + 67
+                    
+                    # We found a rating, return
+                    rating_text = r.text[rating_idx:rating_idx+3]
+                    
+                    if rating_text == ' fo':
+                        # There are new reviews in the page yet
+                        return -1.0
+                    
+                    rating = float(rating_text)
+                    db.add_restaurant_entry(name, location, rating, -1)
+                    return rating
+                
+                # Keep searching the list
+                logging.warning(f'Not Found (Skipping): {place_tripadvisor_url}')
         
-        return float(r.text[rating_idx:rating_idx+3])
+        return -1.0
 
 logging.basicConfig(level=logging.INFO)
 best_cadidate = NominatimApi.get_area('Lisboa')[0]
 df = OverpassApi.get_type_in_bounds(best_cadidate['boundingbox'], ltypes=['tourism', 'amenity=restaurant'])
 location = df.loc[
-    # df['tags_name'].str.contains('Zambeze', case=False, na=False) &
+    df['tags_name'].notnull() &
     df['tags_amenity'].str.contains('restaurant', case=False, na=False)]
 
-# Create a database with recovered values
-db = Database()
 for i, tar in enumerate(location.iloc):
-    if i > 10: break
-    print(tar['tags_name'], end=' ')
+    if i > 50: break
+    
     tripadvisor_rating = Ratings.get_rating(tar['tags_name'], 'Lisboa')
-    print(f'-> Fetched rating: {tripadvisor_rating}')
-    db.add_restaurant_entry(tar['tags_name'], tripadvisor_rating, 0)
+    logging.info(f'Fetched rating: {tripadvisor_rating}')
 
 

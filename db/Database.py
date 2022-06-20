@@ -1,6 +1,8 @@
 import logging
 import sqlite3 as sl
+from datetime import datetime
 
+# TODO: Add documentation to this class
 class Database:
     NULL = ''
     
@@ -10,7 +12,9 @@ class Database:
         self.tables = {
             'RESTAURANT': """
                           id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-                          name TEXT UNIQUE,
+                          timestamp TEXT,
+                          name TEXT,
+                          location TEXT,
                           rating FLOAT,
                           prange INT
                           """
@@ -35,6 +39,12 @@ class Database:
             for table in self.tables.keys():
                 self._create_table(table)
     
+    def is_table_empty(self, table_name: str):
+        with self.con:
+            resulting_cursor = self.con.execute(f"SELECT count(*) FROM {table_name}")
+            count = [r for r in resulting_cursor][0][0]
+            return False if count > 0 else True
+    
     # TODO: Add table multiple entries at once with executemany()
     def add_table_entry(self, table_name: str, **kwargs):
         command = f"INSERT OR IGNORE INTO {table_name} {self._get_table_columns_tuple_string(table_name)} VALUES ("
@@ -57,6 +67,8 @@ class Database:
                 v_toadd = f"\'{v}\'"
                 if not v:
                     v_toadd = "NULL"
+                elif v.startswith('_'):
+                    v_toadd = f'{v[1:]}'
             else:
                 v_toadd = f'{v}'
             entries[entry_order_dict[k]] = v_toadd
@@ -85,9 +97,9 @@ class Database:
         with self.con:
             return [r for r in self.con.execute(command)]
     
-    def add_restaurant_entry(self, name: str, rating: float, price_range: int):
-        self.add_table_entry('RESTAURANT', id=Database.NULL, name=name, rating=rating, prange=price_range)
+    def add_restaurant_entry(self, name: str, location: str, rating: float, price_range: int):
+        self.add_table_entry('RESTAURANT', id=Database.NULL, name=name, rating=rating, prange=price_range, timestamp=str(datetime.now()), location=location)
     
-    def get_restaurant_by_name(self, name: str):
-        return self.get_table_entries_by_values('RESTAURANT', operator='=', name=name)
+    def get_restaurant_by_name(self, name: str, location: str):
+        return self.get_table_entries_by_values('RESTAURANT', operator='=', name=name, location=location)
     
