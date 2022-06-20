@@ -2,8 +2,10 @@ import logging
 import sqlite3 as sl
 from datetime import datetime
 
-# TODO: Add documentation to this class
+
 class Database:
+    """Database class responsible for handling the sqlite3 places database."""
+    
     NULL = ''
     
     def __init__(self, file='places.db') -> None:
@@ -39,7 +41,20 @@ class Database:
             for table in self.tables.keys():
                 self._create_table(table)
     
-    def is_table_empty(self, table_name: str):
+    def is_table_empty(self, table_name: str) -> bool:
+        """Check if the table named table_name is empty.
+        
+        Parameters
+        ----------
+        table_name : str, required
+            The table name to check.
+            
+        Returns
+        -------
+        bool
+        
+        """
+        
         with self.con:
             resulting_cursor = self.con.execute(f"SELECT count(*) FROM {table_name}")
             count = [r for r in resulting_cursor][0][0]
@@ -47,6 +62,20 @@ class Database:
     
     # TODO: Add table multiple entries at once with executemany()
     def add_table_entry(self, table_name: str, **kwargs):
+        """Add a new row to the named table with columns defined in the kwargs.
+        
+        Parameters
+        ----------
+        table_name : str, required
+            The table name to check.
+        **kwargs : any
+            The name of the columns and their required value.
+            (ex. name='Richard')
+            The number of arguments must be the same as the number of columns of the table.
+            
+            Crashes if the key/column does not exist in the table.
+        """
+        
         command = f"INSERT OR IGNORE INTO {table_name} {self._get_table_columns_tuple_string(table_name)} VALUES ("
         
         entry_name = self._get_table_columns_list(table_name)
@@ -79,6 +108,34 @@ class Database:
             self.con.execute(command)
             
     def get_table_entries_by_values(self, table_name: str, operator='=', **kwargs):
+        """Get a row to the named table with columns conditions defined in the kwargs.
+        
+        Parameters
+        ----------
+        table_name : str, required
+            The table name to check.
+        operator : str, optional
+            The operator to create the sql query from.
+            Must be one of: =, >, <, >=, <=, <>, ALL, AND, ANY, BETWEEN, EXISTS, IN, LIKE, NOT, OR or SOME
+        **kwargs : any
+            The name of the columns and their required value condition.
+            (ex. name='Richard')
+            The number of arguments must be the same as the number of columns of the table.
+            
+            If more than one kwarg is present the conditions perform a logical AND
+        
+        Returns
+        -------
+        list
+            a list containing tuples representing rows
+        
+        Example
+        -------
+            `get_table_entries_by_values('RESTAURANT', 'LIKE', name='%Pizza%')` yields the following query:
+            
+            `SELECT * FROM RESTAURANT WHERE name LIKE '%Pizza%';`
+        """
+        
         command = f"SELECT * FROM {table_name} WHERE "
         entries = []
         
@@ -98,8 +155,10 @@ class Database:
             return [r for r in self.con.execute(command)]
     
     def add_restaurant_entry(self, name: str, location: str, rating: float, price_range: int):
+        """Shorthand method to add an entry to the RESTAURANT table."""
         self.add_table_entry('RESTAURANT', id=Database.NULL, name=name, rating=rating, prange=price_range, timestamp=str(datetime.now()), location=location)
     
     def get_restaurant_by_name(self, name: str, location: str):
+        """Shorthand method to get an entry from the RESTAURANT table."""
         return self.get_table_entries_by_values('RESTAURANT', operator='=', name=name, location=location)
     
